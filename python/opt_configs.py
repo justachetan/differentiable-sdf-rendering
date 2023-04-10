@@ -117,7 +117,7 @@ class SdfConfig(SceneConfig):
         if len(param_keys) > 2 and 'roughness' in param_keys[2]:
             self.variables.append(VolumeVariable(param_keys[2], (sdf_res // 4, sdf_res // 4, sdf_res // 4, 1),
                                                  upsample_iter=[128, 180], beta=self.param_averaging_beta, lr=texture_lr))
-
+        self.sdf_res = sdf_res
         self.loss = loss
         self.render_upsample_iter = None
         if use_multiscale_rendering:

@@ -43,17 +43,32 @@ def optimize_shape(scene_config, mts_args, ref_image_paths,
     # Load scene, currently handle SDF shape separately from Mitsuba scene
     sdf_scene = mi.load_file(ref_scene_name, shape_file='dummysdf.xml', sdf_filename=join(SCENE_DIR, 'sdfs', 'bunny_64.vol'),
                              integrator=config.integrator, resx=scene_config.resx, resy=scene_config.resy, **mts_args)
+    
     sdf_object = sdf_scene.integrator().sdf
+    
     sdf_scene.integrator().warp_field = config.get_warpfield(sdf_object)
 
     params = mi.traverse(sdf_scene)
+    # params[scene_config.param_keys[0]] gives access to the Grid3D object used that stores the SDF
+    # here its dimensions are (64 x 64 x 64 x 1); also it is ia bunny (checked with MC)
+
     assert any('_sdf_' in shape.id() for shape in sdf_scene.shapes()), "Could not find a placeholder shape for the SDF"
     params.keep(scene_config.param_keys)
+    # above line just retains the SDF object (SamplingIntegrator.sdf.data). presumably that will be the only thing optimized
 
     opt = mi.ad.Adam(lr=config.learning_rate, params=params, mask_updates=config.mask_optimizer)
     n_iter = config.n_iter
+    import pdb
+    pdb.set_trace()
     scene_config.initialize(opt, sdf_scene)
+    # initializes the SDF. now we need to update the scene parameters with the initialized SDF
+    import pdb
+    pdb.set_trace()
     params.update(opt)
+    # After this line, params[scene_config.param_keys[0]] becomes a sphere (checked with MC) BUT dimensions are (16 x 16 x 16 x 1)
+    # Reason for this: https://github.com/rgl-epfl/differentiable-sdf-rendering/blob/515d732ba32449809b05d574598909cbd46dce8f/python/variables.py#L88
+    # upsample_iters is not None for the no-tex-12 config
+    # Seems like a case of coarse-to-fine optimization    
 
     # Render shape initialization
     for idx, sensor in enumerate(scene_config.sensors):
@@ -81,6 +96,7 @@ def optimize_shape(scene_config, mts_args, ref_image_paths,
                 seed += 1 + len(scene_config.sensors)
                 view_loss = scene_config.loss(img, ref_images[idx][sensor.film().crop_size()[0]]) / scene_config.batch_size
                 dr.backward(view_loss)
+                
                 bmp = resize_img(mi.Bitmap(img), scene_config.target_res)
                 mi.util.write_bitmap(join(opt_image_dir, f'opt-{i:04d}-{idx:02d}' + ('.png' if write_ldr_images else '.exr')), bmp)
                 loss += view_loss

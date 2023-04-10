@@ -49,6 +49,7 @@ def optimize(scene_name, config, opt_name, output_dir, ref_spp=1024,
     current_output_dir = join(output_dir, scene_name, opt_name, config.name)
     os.makedirs(current_output_dir, exist_ok=True)
     mi.set_log_level(3 if verbose else mi.LogLevel.Warn)
+    # At this point, opt_config which is an instance of SDFConfig should have a sphere as its SDF object
     opt_config, mts_args = get_opt_config(opt_name, opt_config_args)
 
     # Pass scene name as part of the opt. config
@@ -91,13 +92,18 @@ def main(args):
             for opt_config in args.optconfigs:
                 config = get_config(config_name)
                 remaining_args = apply_cmdline_args(config, uargs, return_dict=True)
-
+                
                 if args.print_params:
+                    print(opt_config)
                     opt_config, mts_args = get_opt_config(opt_config, remaining_args)
+
+                    
+
                     print(f'Mitsuba arguments: {mts_args}')
                     sdf_scene = mi.load_file(join(SCENE_DIR, scene_name, f'{scene_name}.xml'),
                                       shape_file='dummysdf.xml', sdf_filename='',
                                       integrator=config.integrator, **mts_args)
+                    
                     print('Parameters: ', mi.traverse(sdf_scene))
                     continue
 

@@ -137,6 +137,8 @@ class SdfVariable(VolumeVariable):
     def __init__(self, k, resolution,
                  sdf_init_fn=create_sphere_sdf,
                  adaptive_learning_rate=True, **kwargs):
+        import pdb
+        pdb.set_trace()
         super().__init__(k, shape=(resolution,) * 3, **kwargs)
         self.adaptive_learning_rate = adaptive_learning_rate
         self.bbox_constraint = True
